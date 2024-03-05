@@ -1,0 +1,4 @@
+name: TeamGlow
+version: '${version}'
+main: awa.xunfeng.teamglow.TeamGlow
+api-version: '1.20'
