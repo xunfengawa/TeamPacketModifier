@@ -1,9 +1,9 @@
 package awa.xunfeng.teamglow;
 
 import awa.xunfeng.command.GlowCommand;
-import awa.xunfeng.config.TeamGlowConfig;
-import awa.xunfeng.glow.GlowingHandler;
-import awa.xunfeng.glow.GlowingListener;
+import awa.xunfeng.teamglow.config.TeamGlowConfig;
+import awa.xunfeng.teamglow.glow.GlowingHandler;
+import awa.xunfeng.teamglow.glow.GlowingListener;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import net.kyori.adventure.text.format.TextColor;
