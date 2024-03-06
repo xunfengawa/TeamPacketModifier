@@ -2,3 +2,12 @@ name: TeamGlow
 version: '${version}'
 main: awa.xunfeng.teamglow.TeamGlow
 api-version: '1.20'
+depend: [ProtocolLib]
+
+commands:
+  teamglow:
+    aliases: # 别名，方便玩家使用
+    usage: "/teamglow <on/off/reload>" # 用法
+    description: "Enable/Disable TeamGlow features." # 描述
+    permission: "minecraft.command.op" # 需要的权限
+    permission-message: "Only OP can do that!" # 无权限返回的消息

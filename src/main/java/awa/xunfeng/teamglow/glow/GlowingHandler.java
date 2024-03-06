@@ -9,6 +9,7 @@ import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.collect.Lists;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -18,10 +19,9 @@ import java.util.*;
 import java.util.List;
 
 import static awa.xunfeng.teamglow.TeamGlow.protocolManager;
-import static awa.xunfeng.teamglow.TeamGlow.scoreboard;
 
 public class GlowingHandler extends PacketAdapter{
-    private static final Set<List<UUID>> oneWayGlowSet = new HashSet<>();
+    private static final Set<List<OfflinePlayer>> oneWayGlowSet = new HashSet<>();
     private static boolean isTeamGlowing = false;
     private static final PacketAdapter packetAdapter = new PacketAdapter(TeamGlow.getInstance(), PacketType.Play.Server.ENTITY_METADATA)
     {
@@ -31,7 +31,7 @@ public class GlowingHandler extends PacketAdapter{
             Player receiver = event.getPlayer();
             Entity glowingEntity = packet.getEntityModifier(receiver.getWorld()).readSafely(0);
             if (!(glowingEntity instanceof Player)) return;
-            List<UUID> playerLs = getUUIDLs(glowingEntity.getUniqueId(),receiver.getUniqueId());
+            List<OfflinePlayer> playerLs = getOfflinePlayerLs((Player) glowingEntity,receiver);
             if (oneWayGlowSet.contains(playerLs)) {
                 List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
                 WrappedDataValue bitMaskContainer = metadata.stream().filter(obj -> (obj.getIndex() == 0)).findAny().orElse(null);
@@ -47,42 +47,51 @@ public class GlowingHandler extends PacketAdapter{
         super(arg0, arg1, arg2);
     }
 
-    public static Set<List<UUID>> getOneWayGlowSet() {
+    public static Set<List<OfflinePlayer>> getOneWayGlowSet() {
         return oneWayGlowSet;
     }
     public static void initOneWayGlowing() {
+        oneWayGlowSet.clear();
         if (!protocolManager.getPacketListeners().contains(packetAdapter)) {
             protocolManager.addPacketListener(packetAdapter);
         }
     }
-    public static List<UUID> getUUIDLs(UUID uuid1, UUID uuid2) {
-        List<UUID> ls = new ArrayList<>();
-        ls.add(uuid1);
-        ls.add(uuid2);
+    public static List<OfflinePlayer> getOfflinePlayerLs(OfflinePlayer p1, OfflinePlayer p2) {
+        List<OfflinePlayer> ls = new ArrayList<>();
+        ls.add(p1);
+        ls.add(p2);
         return ls;
     }
     /**
      * 让一个玩家对另一个玩家单独发光
-     * @param playerGlowUUID 被发光的玩家的UUID
-     * @param playerSeeUUID 看见发光的玩家的UUID
+     * @param playerGlow 被发光的玩家
+     * @param playerSee 看见发光的玩家
      */
-    public static void addOneWayGlow(@Nonnull UUID playerGlowUUID, @Nonnull UUID playerSeeUUID) {
-        oneWayGlowSet.add(getUUIDLs(playerGlowUUID,playerSeeUUID));
-        Player playerGlow = Bukkit.getPlayer(playerGlowUUID);
-        Player playerSee = Bukkit.getPlayer(playerSeeUUID);
-        if (playerGlow!=null && playerSee!=null) sendGlowPacket(protocolManager,playerGlow,playerSee,true);
+    public static void addOneWayGlow(@Nonnull OfflinePlayer playerGlow, @Nonnull OfflinePlayer playerSee) {
+        oneWayGlowSet.add(getOfflinePlayerLs(playerGlow,playerSee));
+        if (playerGlow.isOnline() && playerSee.isOnline()) {
+            sendGlowPacket(
+                    protocolManager,
+                    Objects.requireNonNull(Bukkit.getPlayer(playerGlow.getUniqueId())),
+                    Objects.requireNonNull(Bukkit.getPlayer(playerSee.getUniqueId())),
+                    true);
+        }
     }
     /**
-     * 取消一个玩家对另一个玩家的发光(无法取消已启用的队内发光)
-     * @param playerGlowUUID 被发光的玩家的UUID
-     * @param playerSeeUUID 看见发光的玩家的UUID
+     * 取消一个玩家对另一个玩家的单独发光
+     * @param playerGlow 被发光的玩家
+     * @param playerSee 看见发光的玩家
      */
-    public static void removeOneWayGlow(@Nonnull UUID playerGlowUUID, @Nonnull UUID playerSeeUUID) {
-        if (isTeamGlowing && scoreboard.getPlayerTeam(Bukkit.getOfflinePlayer(playerGlowUUID)) == scoreboard.getPlayerTeam(Bukkit.getOfflinePlayer(playerSeeUUID))) return;
-        oneWayGlowSet.remove(getUUIDLs(playerGlowUUID,playerSeeUUID));
-        Player playerGlow = Bukkit.getPlayer(playerGlowUUID);
-        Player playerSee = Bukkit.getPlayer(playerSeeUUID);
-        if (playerGlow!=null && playerSee!=null) sendGlowPacket(protocolManager,playerGlow,playerSee,false);
+    public static void removeOneWayGlow(@Nonnull OfflinePlayer playerGlow, @Nonnull OfflinePlayer playerSee) {
+        oneWayGlowSet.remove(getOfflinePlayerLs(playerGlow,playerSee));
+        if (playerGlow.isOnline() && playerSee.isOnline()
+            && !Objects.requireNonNull(playerGlow.getPlayer()).isGlowing()) {
+            sendGlowPacket(
+                    protocolManager,
+                    Objects.requireNonNull(Bukkit.getPlayer(playerGlow.getUniqueId())),
+                    Objects.requireNonNull(Bukkit.getPlayer(playerSee.getUniqueId())),
+                    false);
+        }
     }
     /**
      * 全部参赛队伍队内发光
@@ -90,13 +99,14 @@ public class GlowingHandler extends PacketAdapter{
     public static void startAllGlows() {
         isTeamGlowing = true;
         TeamGlowConfig.getGlowTeamList().forEach(textColor -> {
-            if(!TeamGlowConfig.getSeeAllGlowTeamList().contains(textColor)) {
-                for (UUID uuidGlow : TeamGlow.getTeamMap().get(textColor)) {
-                    for (UUID uuidSee : TeamGlow.getTeamMap().get(textColor)) {
-                        if(uuidGlow != uuidSee) {
+            if(!TeamGlowConfig.getSeeAllGlowTeamList().contains(textColor)
+                && TeamGlow.getTeamMap().containsKey(textColor)) {
+                for (OfflinePlayer pGlow : TeamGlow.getTeamMap().get(textColor)) {
+                    for (OfflinePlayer pSee : TeamGlow.getTeamMap().get(textColor)) {
+                        if(pGlow != pSee) {
                             addOneWayGlow(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee)
+                                    Objects.requireNonNull(pGlow),
+                                    Objects.requireNonNull(pSee)
                             );
                         }
                     }
@@ -105,13 +115,15 @@ public class GlowingHandler extends PacketAdapter{
         });
         TeamGlowConfig.getSeeAllGlowTeamList().forEach(textColor -> {
             TeamGlowConfig.getGlowTeamList().forEach(textColorGlow -> {
-                for (UUID uuidGlow : TeamGlow.getTeamMap().get(textColorGlow)) {
-                    for (UUID uuidSee : TeamGlow.getTeamMap().get(textColor)) {
-                        if (uuidGlow != uuidSee) {
-                            addOneWayGlow(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee)
-                            );
+                if((TeamGlow.getTeamMap().containsKey(textColorGlow) && TeamGlow.getTeamMap().containsKey(textColor))) {
+                    for (OfflinePlayer pGlow : TeamGlow.getTeamMap().get(textColorGlow)) {
+                        for (OfflinePlayer pSee : TeamGlow.getTeamMap().get(textColor)) {
+                            if (pGlow != pSee) {
+                                addOneWayGlow(
+                                        Objects.requireNonNull(pGlow),
+                                        Objects.requireNonNull(pSee)
+                                );
+                            }
                         }
                     }
                 }
@@ -122,7 +134,14 @@ public class GlowingHandler extends PacketAdapter{
      * 全部参赛队伍停止队内发光
      */
     public static void stopAllGlows() {
-        oneWayGlowSet.clear();
+        isTeamGlowing = false;
+        Set<List<OfflinePlayer>> tmpSet = new HashSet<>(oneWayGlowSet);
+        tmpSet.forEach(pList -> {
+            removeOneWayGlow(
+                    Objects.requireNonNull(pList.get(0)),
+                    Objects.requireNonNull(pList.get(1))
+            );
+        });
     }
     static void sendGlowPacket(ProtocolManager protocolManager, @Nonnull Player playerGlow, @Nonnull Player playerSee, boolean shouldGlow) {
         PacketContainer glowPacket = protocolManager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
@@ -157,7 +176,7 @@ public class GlowingHandler extends PacketAdapter{
     }
 
     public static void refresh() {
-        oneWayGlowSet.clear();
+        stopAllGlows();
         startAllGlows();
     }
 }
