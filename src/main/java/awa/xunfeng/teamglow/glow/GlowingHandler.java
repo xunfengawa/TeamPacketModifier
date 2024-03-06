@@ -9,6 +9,7 @@ import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.collect.Lists;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -18,7 +19,6 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.List;
 
-import static awa.xunfeng.teamglow.TeamGlow.getInstance;
 import static awa.xunfeng.teamglow.TeamGlow.protocolManager;
 import static awa.xunfeng.teamglow.config.TeamGlowConfig.isEnabled;
 
@@ -33,13 +33,22 @@ public class GlowingHandler extends PacketAdapter{
             Player receiver = event.getPlayer();
             Entity glowingEntity = packet.getEntityModifier(receiver.getWorld()).readSafely(0);
             if (!(glowingEntity instanceof Player)) return;
-            List<OfflinePlayer> playerLs = getOfflinePlayerLs((Player) glowingEntity,receiver);
+            if (((Player) glowingEntity).getGameMode().equals(GameMode.SPECTATOR)) return;
+            List<OfflinePlayer> playerLs = getOfflinePlayerLs(
+                    Bukkit.getOfflinePlayer(glowingEntity.getUniqueId()),
+                    Bukkit.getOfflinePlayer(receiver.getUniqueId()));
             if (oneWayGlowSet.contains(playerLs)) {
                 List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
                 WrappedDataValue bitMaskContainer = metadata.stream().filter(obj -> (obj.getIndex() == 0)).findAny().orElse(null);
                 if (bitMaskContainer != null) {
                     Byte flags = (Byte) bitMaskContainer.getValue();
                     bitMaskContainer.setValue((byte)(flags | (byte)64));
+                    event.setPacket(packet);
+                }
+                else {
+                    byte entityByte = getPlayerByte((Player) glowingEntity, true);
+                    metadata.add(new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class),entityByte));
+                    packet.getDataValueCollectionModifier().write(0,metadata);
                     event.setPacket(packet);
                 }
             }
@@ -146,6 +155,7 @@ public class GlowingHandler extends PacketAdapter{
         });
     }
     static void sendGlowPacket(ProtocolManager protocolManager, @Nonnull Player playerGlow, @Nonnull Player playerSee, boolean shouldGlow) {
+        if ((playerGlow).getGameMode().equals(GameMode.SPECTATOR)) return;
         PacketContainer glowPacket = protocolManager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
         glowPacket.getIntegers().write(0, playerGlow.getEntityId());
         WrappedDataWatcher watcher = new WrappedDataWatcher();
