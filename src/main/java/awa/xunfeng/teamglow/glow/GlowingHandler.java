@@ -18,7 +18,9 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.List;
 
+import static awa.xunfeng.teamglow.TeamGlow.getInstance;
 import static awa.xunfeng.teamglow.TeamGlow.protocolManager;
+import static awa.xunfeng.teamglow.config.TeamGlowConfig.isEnabled;
 
 public class GlowingHandler extends PacketAdapter{
     private static final Set<List<OfflinePlayer>> oneWayGlowSet = new HashSet<>();
@@ -176,6 +178,7 @@ public class GlowingHandler extends PacketAdapter{
     }
 
     public static void refresh() {
+        if (!isEnabled()) return;
         stopAllGlows();
         startAllGlows();
     }

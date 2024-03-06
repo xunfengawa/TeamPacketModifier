@@ -36,7 +36,6 @@ public class GlowingListener implements Listener {
                                 Objects.requireNonNull(Bukkit.getPlayer(playerGlow.getUniqueId())),
                                 Objects.requireNonNull(Bukkit.getPlayer(playerSee.getUniqueId())),
                                 true);
-                        System.out.println(playerGlow.getName()+"->"+playerSee.getName());
                     }
                 }.runTaskLater(TeamGlow.getInstance(),10);
             }

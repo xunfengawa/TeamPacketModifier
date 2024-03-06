@@ -30,6 +30,9 @@ public class TeamGlowConfig {
         put("white", TextColor.color(255,255,255));
 
     }};
+    private static String configUrl = "config.yml";
+    private static File file = new File(TeamGlow.getInstance().getDataFolder(), configUrl);
+    private static YamlConfiguration config = new YamlConfiguration();
     private static boolean enable = false;
     private static List<String> glowTeamList = new ArrayList<>();
     private static List<String> seeAllGlowTeamList = new ArrayList<>();
@@ -39,12 +42,9 @@ public class TeamGlowConfig {
     public static List<TextColor> getGlowTeamList() {return glowTeamTextColorList;}
     public static List<TextColor> getSeeAllGlowTeamList() {return  seeAllGlowTeamTextColorList;}
     public static void load() {
-        String configUrl = "config.yml";
-        File file = new File(TeamGlow.getInstance().getDataFolder(), configUrl);
         if (!file.exists()) {
             TeamGlow.getInstance().saveResource(configUrl, false);
         }
-        YamlConfiguration config = new YamlConfiguration();
         config.options().parseComments(true);
         try {
             config.load(file);
@@ -56,6 +56,15 @@ public class TeamGlowConfig {
         glowTeamTextColorList = str2textColor(glowTeamList);
         seeAllGlowTeamList = config.getStringList("SeeAllGlow-TeamColors");
         seeAllGlowTeamTextColorList = str2textColor(seeAllGlowTeamList);
+    }
+
+    public static void setEnabled(boolean bool) {
+        config.set("enable", bool);
+        try {
+            config.save(file);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private static List<TextColor> str2textColor(List<String> ls) {
