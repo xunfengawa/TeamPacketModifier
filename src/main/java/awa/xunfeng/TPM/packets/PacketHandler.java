@@ -178,7 +178,6 @@ public class PacketHandler extends PacketAdapter{
      */
     public static void updateTeamGlow(Team oldTeam, Team curTeam, UUID pUpdateUUID) {
         for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
-            System.out.println(Bukkit.getOfflinePlayer("[ADD] "+pUpdateUUID).getName()+"<->"+Bukkit.getOfflinePlayer(uuid).getName());
             //现在的队伍，添加该玩家对各玩家的发光
             setPacketHandle(
                     Objects.requireNonNull(pUpdateUUID),
@@ -197,7 +196,6 @@ public class PacketHandler extends PacketAdapter{
             );
         }
         for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
-            System.out.println(Bukkit.getOfflinePlayer("[REMOVE] "+pUpdateUUID).getName()+"<->"+Bukkit.getOfflinePlayer(uuid).getName());
             //以前的队伍，移除该玩家对各玩家的发光
             setPacketHandle(
                     Objects.requireNonNull(pUpdateUUID),

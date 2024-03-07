@@ -109,7 +109,6 @@ public class PacketListener implements Listener {
             oldPlayerLs.removeAll(sameLs);
             updatePlayerLs.addAll(curPlayerLs);
             updatePlayerLs.addAll(oldPlayerLs);
-            System.out.println(updatePlayerLs);
         }
         for (UUID updateUUID : updatePlayerLs) {
             Team oldTeam = findOldTeamByPlayerUUID(updateUUID);
