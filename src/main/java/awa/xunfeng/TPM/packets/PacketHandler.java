@@ -13,6 +13,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.Team;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -173,6 +174,49 @@ public class PacketHandler extends PacketAdapter{
         if (playerModified!=null && playerSee!=null) ManualPacket.sendManualPacket(protocolManager,playerModified,playerSee,shouldGlow,shouldInvis);
     }
     /**
+     * 单参赛队伍队内发光
+     */
+    public static void updateTeamGlow(Team oldTeam, Team curTeam, UUID pUpdateUUID) {
+        for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
+            System.out.println(Bukkit.getOfflinePlayer("[ADD] "+pUpdateUUID).getName()+"<->"+Bukkit.getOfflinePlayer(uuid).getName());
+            //现在的队伍，添加该玩家对各玩家的发光
+            setPacketHandle(
+                    Objects.requireNonNull(pUpdateUUID),
+                    Objects.requireNonNull(uuid),
+                    -1,
+                    true,
+                    null
+            );
+            //现在的队伍，添加各玩家对该玩家的发光
+            setPacketHandle(
+                    Objects.requireNonNull(uuid),
+                    Objects.requireNonNull(pUpdateUUID),
+                    -1,
+                    true,
+                    null
+            );
+        }
+        for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
+            System.out.println(Bukkit.getOfflinePlayer("[REMOVE] "+pUpdateUUID).getName()+"<->"+Bukkit.getOfflinePlayer(uuid).getName());
+            //以前的队伍，移除该玩家对各玩家的发光
+            setPacketHandle(
+                    Objects.requireNonNull(pUpdateUUID),
+                    Objects.requireNonNull(uuid),
+                    -1,
+                    false,
+                    null
+            );
+            //以前的队伍，移除各玩家对该玩家的发光
+            setPacketHandle(
+                    Objects.requireNonNull(uuid),
+                    Objects.requireNonNull(pUpdateUUID),
+                    -1,
+                    false,
+                    null
+            );
+        }
+    }
+    /**
      * 全部参赛队伍队内发光
      */
     public static void startTeamGlow() {
@@ -221,7 +265,7 @@ public class PacketHandler extends PacketAdapter{
     /**
      * 全部参赛队伍停止队内发光
      */
-    public static void stopTeamGlowAll() {
+    public static void stopTeamGlow() {
         isTeamGlowing = false;
         TeamManager.teamMap.forEach((team, uuids) -> {
             if(TPMConfig.getGlowTeamList().contains(team.color())) {
@@ -271,7 +315,7 @@ public class PacketHandler extends PacketAdapter{
      * 移除所有单向发包修改
      */
     public static void stop() {
-        stopTeamGlowAll();
+        stopTeamGlow();
         stopSpecTeamGlowAll();
         oneWayPacketHandleMap.keySet().forEach(uuidLs -> {
             Player playerModified = Bukkit.getPlayer(uuidLs.get(0));
@@ -284,13 +328,14 @@ public class PacketHandler extends PacketAdapter{
     }
 
     public static void refresh() {
-        stopTeamGlowAll();
-        stopSpecTeamGlowAll();
         refreshTeamMap();
-        startTeamGlow();
-        startSpecTeamGlowAll();
         for (Player p : Bukkit.getOnlinePlayers()) {
             ManualPacket.sendManualPacket(protocolManager, p, p, p.isGlowing(), (p.isInvisible() && !getIngameConfig("CancelSelfInvis")));
         }
+        stopTeamGlow();
+        startSpecTeamGlowAll();
+        refreshTeamMap();
+        startTeamGlow();
+        startSpecTeamGlowAll();
     }
 }
