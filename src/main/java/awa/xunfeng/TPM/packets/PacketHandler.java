@@ -332,7 +332,6 @@ public class PacketHandler extends PacketAdapter{
         }
         stopTeamGlow();
         startSpecTeamGlowAll();
-        refreshTeamMap();
         startTeamGlow();
         startSpecTeamGlowAll();
     }
