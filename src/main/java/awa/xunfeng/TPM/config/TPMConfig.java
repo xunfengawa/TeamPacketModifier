@@ -1,6 +1,6 @@
-package awa.xunfeng.teamglow.config;
+package awa.xunfeng.TPM.config;
 
-import awa.xunfeng.teamglow.TeamGlow;
+import awa.xunfeng.TPM.TeamPacketModifier;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TeamGlowConfig {
+public class TPMConfig {
     private static final Map<String, TextColor> stringTextColorMap = new HashMap<>(){{
         put("black", TextColor.color(0,0,0));
         put("dark_blue", TextColor.color(0,0,170));
@@ -31,19 +31,17 @@ public class TeamGlowConfig {
 
     }};
     private static String configUrl = "config.yml";
-    private static File file = new File(TeamGlow.getInstance().getDataFolder(), configUrl);
+    private static File file = new File(TeamPacketModifier.getInstance().getDataFolder(), configUrl);
     private static YamlConfiguration config = new YamlConfiguration();
-    private static boolean enable = false;
     private static List<String> glowTeamList = new ArrayList<>();
     private static List<String> seeAllGlowTeamList = new ArrayList<>();
     private static List<TextColor> glowTeamTextColorList = new ArrayList<>();
     private static List<TextColor> seeAllGlowTeamTextColorList = new ArrayList<>();
-    public static boolean isEnabled() {return enable;}
     public static List<TextColor> getGlowTeamList() {return glowTeamTextColorList;}
     public static List<TextColor> getSeeAllGlowTeamList() {return  seeAllGlowTeamTextColorList;}
     public static void load() {
         if (!file.exists()) {
-            TeamGlow.getInstance().saveResource(configUrl, false);
+            TeamPacketModifier.getInstance().saveResource(configUrl, false);
         }
         config.options().parseComments(true);
         try {
@@ -51,7 +49,6 @@ public class TeamGlowConfig {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        enable = config.getBoolean("enable");
         glowTeamList = config.getStringList("Glow-TeamColors");
         glowTeamTextColorList = str2textColor(glowTeamList);
         seeAllGlowTeamList = config.getStringList("SeeAllGlow-TeamColors");
