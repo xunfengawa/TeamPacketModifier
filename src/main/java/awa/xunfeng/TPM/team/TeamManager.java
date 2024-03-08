@@ -17,7 +17,7 @@ public class TeamManager {
         oldTeamMap.putAll(teamMap);
         teamMap.clear();
         for (Team team : scoreboard.getTeams()) {
-            if (TPMConfig.getIgnoreTeamList().contains(team.color()) || !team.hasColor()) continue;
+            if (!team.hasColor() || TPMConfig.getIgnoreTeamList().contains(team.color())) continue;
             List<UUID> uuidLs = new ArrayList<>();
             for (String entry : team.getEntries()) {
                 uuidLs.add(Bukkit.getOfflinePlayer(entry).getUniqueId());

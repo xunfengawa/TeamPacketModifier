@@ -176,42 +176,46 @@ public class PacketHandler extends PacketAdapter{
     /**
      * 单参赛队伍队内发光
      */
-    public static void updateTeamGlow(Team oldTeam, Team curTeam, UUID pUpdateUUID) {
-        for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
-            //现在的队伍，添加该玩家对各玩家的发光
-            setPacketHandle(
-                    Objects.requireNonNull(pUpdateUUID),
-                    Objects.requireNonNull(uuid),
-                    -1,
-                    true,
-                    null
-            );
-            //现在的队伍，添加各玩家对该玩家的发光
-            setPacketHandle(
-                    Objects.requireNonNull(uuid),
-                    Objects.requireNonNull(pUpdateUUID),
-                    -1,
-                    true,
-                    null
-            );
+    public static void updateTeamGlow(@Nullable Team oldTeam,@Nullable Team curTeam, UUID pUpdateUUID) {
+        if (TeamManager.oldTeamMap.containsKey(curTeam)) {
+            for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
+                //现在的队伍，添加该玩家对各玩家的发光
+                setPacketHandle(
+                        Objects.requireNonNull(pUpdateUUID),
+                        Objects.requireNonNull(uuid),
+                        -1,
+                        true,
+                        null
+                );
+                //现在的队伍，添加各玩家对该玩家的发光
+                setPacketHandle(
+                        Objects.requireNonNull(uuid),
+                        Objects.requireNonNull(pUpdateUUID),
+                        -1,
+                        true,
+                        null
+                );
+            }
         }
-        for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
-            //以前的队伍，移除该玩家对各玩家的发光
-            setPacketHandle(
-                    Objects.requireNonNull(pUpdateUUID),
-                    Objects.requireNonNull(uuid),
-                    -1,
-                    false,
-                    null
-            );
-            //以前的队伍，移除各玩家对该玩家的发光
-            setPacketHandle(
-                    Objects.requireNonNull(uuid),
-                    Objects.requireNonNull(pUpdateUUID),
-                    -1,
-                    false,
-                    null
-            );
+        if (TeamManager.teamMap.containsKey(oldTeam)) {
+            for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
+                //以前的队伍，移除该玩家对各玩家的发光
+                setPacketHandle(
+                        Objects.requireNonNull(pUpdateUUID),
+                        Objects.requireNonNull(uuid),
+                        -1,
+                        false,
+                        null
+                );
+                //以前的队伍，移除各玩家对该玩家的发光
+                setPacketHandle(
+                        Objects.requireNonNull(uuid),
+                        Objects.requireNonNull(pUpdateUUID),
+                        -1,
+                        false,
+                        null
+                );
+            }
         }
     }
     /**
