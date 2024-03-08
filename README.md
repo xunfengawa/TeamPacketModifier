@@ -12,18 +12,22 @@ https://ci.dmulloy2.net/job/ProtocolLib/679/artifact/build/libs/ProtocolLib.jar
 
 ## 2. 配置文件config.yml
 ```
-    # 队伍发光插件配置文件
-    # 颜色待选列表: [black, dark_blue, dark_green, dark_aqua, dark_red, dark_purple, gold, gray,
-                    dark_gray, blue, green, aqua, red, light_purple, yellow, white]
-    # (参考wiki格式化代码页面)
+# 队伍发光插件配置文件
+# 颜色待选列表: [black, dark_blue, dark_green, dark_aqua, dark_red, dark_purple, gold, dark_gray,
+#              blue, green, aqua, red, light_purple, yellow, white]
+# (参考wiki格式化代码页面)
 
-    # 只有队内发光的队伍颜色列表
-    Glow-TeamColors:
-        ["red", "blue", "yellow", "green", "gold", "dark_purple", "light_purple", "dark_aqua"]
+# 只有队内发光的队伍颜色列表
+Glow-TeamColors:
+  ["red", "blue", "yellow", "green", "gold", "dark_purple", "light_purple", "dark_aqua"]
 
-    # 能看到所有发光的队伍颜色列表
-    SeeAllGlow-TeamColors:
-        ["gray"]
+# 能看到所有发光的队伍颜色列表
+SeeAllGlow-TeamColors:
+  ["gray"]
+
+# 忽略的队伍颜色列表(减少卡顿)
+Ignore-TeamColors:
+  ["white"]
 ```
 
 ## 3. 计分板接口

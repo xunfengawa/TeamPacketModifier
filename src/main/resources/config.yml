@@ -11,5 +11,6 @@ Glow-TeamColors:
 SeeAllGlow-TeamColors:
   ["gray"]
 
+# 忽略的队伍颜色列表(减少卡顿)
 Ignore-TeamColors:
   ["white"]
