@@ -35,10 +35,13 @@ public class TPMConfig {
     private static YamlConfiguration config = new YamlConfiguration();
     private static List<String> glowTeamList = new ArrayList<>();
     private static List<String> seeAllGlowTeamList = new ArrayList<>();
+    private static List<String> ignoreTeamList = new ArrayList<>();
     private static List<TextColor> glowTeamTextColorList = new ArrayList<>();
     private static List<TextColor> seeAllGlowTeamTextColorList = new ArrayList<>();
+    private static List<TextColor> ignoreTeamTextColorList = new ArrayList<>();
     public static List<TextColor> getGlowTeamList() {return glowTeamTextColorList;}
     public static List<TextColor> getSeeAllGlowTeamList() {return  seeAllGlowTeamTextColorList;}
+    public static List<TextColor> getIgnoreTeamList() {return  ignoreTeamTextColorList;}
     public static void load() {
         if (!file.exists()) {
             TeamPacketModifier.getInstance().saveResource(configUrl, false);
@@ -53,6 +56,8 @@ public class TPMConfig {
         glowTeamTextColorList = str2textColor(glowTeamList);
         seeAllGlowTeamList = config.getStringList("SeeAllGlow-TeamColors");
         seeAllGlowTeamTextColorList = str2textColor(seeAllGlowTeamList);
+        ignoreTeamList = config.getStringList("Ignore-TeamColors");
+        ignoreTeamTextColorList = str2textColor(ignoreTeamList);
     }
 
     public static void setEnabled(boolean bool) {

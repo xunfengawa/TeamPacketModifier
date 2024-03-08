@@ -9,4 +9,7 @@ Glow-TeamColors:
 
 # 能看到所有发光的队伍颜色列表
 SeeAllGlow-TeamColors:
-  ["white", "gray"]
+  ["gray"]
+
+Ignore-TeamColors:
+  ["white"]

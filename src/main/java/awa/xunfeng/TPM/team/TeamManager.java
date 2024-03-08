@@ -1,6 +1,7 @@
 package awa.xunfeng.TPM.team;
 
 import awa.xunfeng.TPM.config.TPMConfig;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
@@ -16,6 +17,7 @@ public class TeamManager {
         oldTeamMap.putAll(teamMap);
         teamMap.clear();
         for (Team team : scoreboard.getTeams()) {
+            if (TPMConfig.getIgnoreTeamList().contains(team.color()) || !team.hasColor()) continue;
             List<UUID> uuidLs = new ArrayList<>();
             for (String entry : team.getEntries()) {
                 uuidLs.add(Bukkit.getOfflinePlayer(entry).getUniqueId());
