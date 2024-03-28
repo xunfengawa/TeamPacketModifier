@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'awa.xunfeng'
-version = '0.2.0-BETA'
+version = '0.2.1-BETA'
 
 repositories {
     mavenCentral()

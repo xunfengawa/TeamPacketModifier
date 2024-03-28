@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Objects;
 
+import static awa.xunfeng.TPM.TeamPacketModifier.enabled;
 import static awa.xunfeng.TPM.packets.PacketHandler.setContainerBits;
 
 public class ManualPacket {
@@ -37,7 +38,7 @@ public class ManualPacket {
         watcher.setEntity(entityModified);
         //逻辑部分
         WrappedDataValue bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
-        setContainerBits(handle, bitMaskContainer);
+        if (enabled) setContainerBits(handle, bitMaskContainer);
         watcher.setObject(0, byteSerializer, bitMaskContainer.getValue());
         //发送部分
         final List<WrappedDataValue> wrappedDataValueList = Lists.newArrayList();
@@ -47,14 +48,15 @@ public class ManualPacket {
         });
         modifiedPacket.getDataValueCollectionModifier().write(0, wrappedDataValueList);
         protocolManager.sendServerPacket(playerSee, modifiedPacket);
+//        System.out.println("手动发送实体姿态包: " + entityModified.getName() + " -> " + playerSee.getName() + " (" + bitMaskContainer.getValue() + ")");
     }
 
     public static byte getEntityPoseByte(Entity entity) {
         boolean[] data;
         if (entity instanceof Player player) {
             data = new boolean[]{
-                    entity.isVisualFire(), entity.isSneaking(), false, player.isSprinting(),
-                    player.isSwimming(), entity.isInvisible(), entity.isGlowing(), player.isGliding()
+                    player.isVisualFire(), player.isSneaking(), false, player.isSprinting(),
+                    player.isSwimming(), player.isInvisible(), player.isGlowing(), player.isGliding()
             };
         }
         else {

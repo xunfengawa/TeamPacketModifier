@@ -7,6 +7,7 @@ import awa.xunfeng.TPM.packets.PacketListener;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.Bukkit;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
@@ -17,6 +18,8 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
     private static TeamPacketModifier INSTANCE;
     public static Scoreboard scoreboard;
     public static ProtocolManager protocolManager;
+    public static boolean enabled = false;
+    public static PacketListener packetListener;
     public static TeamPacketModifier getInstance() {
         return INSTANCE;
     }
@@ -29,15 +32,27 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         INSTANCE = this;
+        packetListener = new PacketListener();
         TPMConfig.load();
-        if (isEnabled()) {
-            scoreboard = this.getServer().getScoreboardManager().getMainScoreboard();
-            protocolManager = ProtocolLibrary.getProtocolManager();
-            PacketHandler.init(this);
-            PacketHandler.refresh();
+        scoreboard = this.getServer().getScoreboardManager().getMainScoreboard();
+        protocolManager = ProtocolLibrary.getProtocolManager();
+        enable();
 
-            TPMCommand TPMCommand = new TPMCommand();
-            Objects.requireNonNull(Bukkit.getPluginCommand("TPM")).setExecutor(TPMCommand);
-        }
+        TPMCommand TPMCommand = new TPMCommand();
+        Objects.requireNonNull(Bukkit.getPluginCommand("TPM")).setExecutor(TPMCommand);
+    }
+
+    public static void enable() {
+        if (enabled) return;
+        enabled = true;
+        PacketHandler.init();
+        Bukkit.getPluginManager().registerEvents(packetListener, TeamPacketModifier.getInstance());
+    }
+
+    public static void disable() {
+        if (!enabled) return;
+        enabled = false;
+        PacketHandler.disable();
+        HandlerList.unregisterAll(packetListener);
     }
 }

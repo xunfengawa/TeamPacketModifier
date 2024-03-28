@@ -19,16 +19,14 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.*;
 
-import static awa.xunfeng.TPM.TeamPacketModifier.getIngameConfig;
-import static awa.xunfeng.TPM.TeamPacketModifier.protocolManager;
+import static awa.xunfeng.TPM.TeamPacketModifier.*;
 import static awa.xunfeng.TPM.packets.ManualPacket.getEntityPoseByte;
 import static awa.xunfeng.TPM.packets.ManualPacket.sendManualPacket;
 import static awa.xunfeng.TPM.team.TeamManager.refreshTeamMap;
 
-public class PacketHandler extends PacketAdapter{
-    private static final Map<List<UUID>,EntityPosePacketHandle> entityPosePacketHandleMap = new HashMap<>();
-    private static final PacketAdapter packetAdapter = new PacketAdapter(TeamPacketModifier.getInstance(), PacketType.Play.Server.ENTITY_METADATA)
-    {
+public class PacketHandler extends PacketAdapter {
+    private static final Map<List<UUID>, EntityPosePacketHandle> entityPosePacketHandleMap = new HashMap<>();
+    private static final PacketAdapter packetAdapter = new PacketAdapter(TeamPacketModifier.getInstance(), PacketType.Play.Server.ENTITY_METADATA) {
         public void onPacketSending(PacketEvent event) {
 //            System.out.println("onPacketSending: " + event.getPacket());
             if (!event.getPacket().getType().equals(PacketType.Play.Server.ENTITY_METADATA)) return;
@@ -64,8 +62,7 @@ public class PacketHandler extends PacketAdapter{
                     bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
                     metadata.add(bitMaskContainer);
                     packet.getDataValueCollectionModifier().write(0, metadata);
-                }
-                else {
+                } else {
                     Byte flags = (Byte) bitMaskContainer.getValue();
                     bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
                 }
@@ -77,71 +74,83 @@ public class PacketHandler extends PacketAdapter{
 
     static void setContainerBits(EntityPosePacketHandle handle, WrappedDataValue bitMaskContainer) {
         Byte flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.ON_FIRE.setBit(flags));
-        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isVisualFire() ? EntityData.ON_FIRE.setBit(flags) : EntityData.ON_FIRE.unsetBit(flags));
-        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.ON_FIRE.unsetBit(flags));
+        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.ON_FIRE.setBit(flags));
+        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.ON_FIRE.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.CROUCHING.setBit(flags));
-        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isSneaking() ? EntityData.CROUCHING.setBit(flags) : EntityData.CROUCHING.unsetBit(flags));
-        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.CROUCHING.unsetBit(flags));
+        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.CROUCHING.setBit(flags));
+        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.CROUCHING.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.setBit(flags));
-        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.unsetBit(flags));
-        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.unsetBit(flags));
+        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.setBit(flags));
+        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.SPRINTING.setBit(flags));
-        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(((Player) handle.getEntityModified()).isSprinting() ? EntityData.SPRINTING.setBit(flags) : EntityData.SPRINTING.unsetBit(flags));
-        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.SPRINTING.unsetBit(flags));
+        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.SPRINTING.setBit(flags));
+        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.SPRINTING.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.SWIMMING.setBit(flags));
-        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isSwimming() ? EntityData.SWIMMING.setBit(flags) : EntityData.SWIMMING.unsetBit(flags));
-        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.SWIMMING.unsetBit(flags));
+        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.SWIMMING.setBit(flags));
+        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.SWIMMING.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
-        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isInvisible() ? EntityData.INVISIBLE.setBit(flags) : EntityData.INVISIBLE.unsetBit(flags));
-        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
+        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
+        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.GLOWING.setBit(flags));
-        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isGlowing() ? EntityData.GLOWING.setBit(flags) : EntityData.GLOWING.unsetBit(flags));
-        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.GLOWING.unsetBit(flags));
+        if (getIngameConfig("Glow")) {
+            if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+                bitMaskContainer.setValue(EntityData.GLOWING.setBit(flags));
+            if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+                bitMaskContainer.setValue(EntityData.GLOWING.unsetBit(flags));
+        }
 
         flags = (Byte) bitMaskContainer.getValue();
-        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.GLIDING.setBit(flags));
-        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
-            bitMaskContainer.setValue(handle.getEntityModified().isGliding() ? EntityData.GLIDING.setBit(flags) : EntityData.GLIDING.unsetBit(flags));
-        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.GLIDING.unsetBit(flags));
+        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE)
+            bitMaskContainer.setValue(EntityData.GLIDING.setBit(flags));
+        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
+            bitMaskContainer.setValue(EntityData.GLIDING.unsetBit(flags));
     }
 
     public PacketHandler(Plugin arg0, ListenerPriority arg1, PacketType... arg2) {
         super(arg0, arg1, arg2);
     }
-    public static void init(Plugin plugin) {
-        PacketHandler.initPacketHandle();
-        Bukkit.getPluginManager().registerEvents(new PacketListener(),plugin);
+
+    public static void init() {
+        initPacketHandle();
+        refresh();
     }
+
+    public static void disable() {
+        cancelPacketHandle();
+        removeAllPosePacketHandle();
+    }
+
     public static void initPacketHandle() {
         if (!protocolManager.getPacketListeners().contains(packetAdapter)) {
             protocolManager.addPacketListener(packetAdapter);
         }
     }
+
     public static void cancelPacketHandle() {
         if (protocolManager.getPacketListeners().contains(packetAdapter)) {
             protocolManager.removePacketListener(packetAdapter);
         }
     }
-    public static Map<List<UUID>,EntityPosePacketHandle> entityPosePacketHandleMap() {
+
+    public static Map<List<UUID>, EntityPosePacketHandle> entityPosePacketHandleMap() {
         return entityPosePacketHandleMap;
     }
 
@@ -153,20 +162,21 @@ public class PacketHandler extends PacketAdapter{
     /**
      * 修改一个实体对一个玩家的发包处理
      * 不会覆盖原先已有的处理
+     *
      * @param entityModifiedUUID 被修改实体的UUID
-     * @param playerSeeUUID 收包玩家的UUID
-     * @param dataType 要修改的实体姿态数据类型
-     * @param handleType 目标操作类型
+     * @param playerSeeUUID      收包玩家的UUID
+     * @param dataType           要修改的实体姿态数据类型
+     * @param handleType         目标操作类型
      */
     public static void setPacketHandle(UUID entityModifiedUUID, UUID playerSeeUUID, EntityData dataType, EntityPosePacketHandle.EntityPoseHandleType handleType) {
-        List<UUID> uuidLs = Arrays.asList(entityModifiedUUID,playerSeeUUID);
+        List<UUID> uuidLs = Arrays.asList(entityModifiedUUID, playerSeeUUID);
         EntityPosePacketHandle handle = entityPosePacketHandleMap.getOrDefault(
                 uuidLs,
-                new EntityPosePacketHandle.EntityPosePacketHandleBuilder(entityModifiedUUID,playerSeeUUID)
+                new EntityPosePacketHandle.EntityPosePacketHandleBuilder(entityModifiedUUID, playerSeeUUID)
                         .build()
         ).setData(dataType, handleType);
-        entityPosePacketHandleMap.put(uuidLs,handle);
-        sendManualPacket(protocolManager,handle);
+        entityPosePacketHandleMap.put(uuidLs, handle);
+        sendManualPacket(protocolManager, handle);
     }
 
     /**
@@ -174,10 +184,10 @@ public class PacketHandler extends PacketAdapter{
      */
     public static void startTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
-            if(TPMConfig.getGlowTeamList().contains(team.color())) {
+            if (TPMConfig.getGlowTeamList().contains(team.color())) {
                 for (UUID entityModifiedUUID : uuids) {
                     for (UUID playerSeeUUID : uuids) {
-                        if(entityModifiedUUID != playerSeeUUID) {
+                        if (entityModifiedUUID != playerSeeUUID) {
                             setPacketHandle(
                                     entityModifiedUUID,
                                     playerSeeUUID,
@@ -190,15 +200,16 @@ public class PacketHandler extends PacketAdapter{
             }
         });
     }
+
     /**
      * 全部参赛队伍停止队内发光
      */
     public static void stopTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
-            if(TPMConfig.getGlowTeamList().contains(team.color())) {
+            if (TPMConfig.getGlowTeamList().contains(team.color())) {
                 for (UUID entityModifiedUUID : uuids) {
                     for (UUID playerSeeUUID : uuids) {
-                        if(entityModifiedUUID != playerSeeUUID) {
+                        if (entityModifiedUUID != playerSeeUUID) {
                             setPacketHandle(
                                     entityModifiedUUID,
                                     playerSeeUUID,
@@ -211,16 +222,17 @@ public class PacketHandler extends PacketAdapter{
             }
         });
     }
+
     /**
      * 全部旁观队伍看参赛队伍全部发光
      */
     public static void startSpecTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
-            if(TPMConfig.getSeeAllGlowTeamList().contains(team.color())) {
+            if (TPMConfig.getSeeAllGlowTeamList().contains(team.color())) {
                 List<UUID> playerParticipantLs = TeamManager.getAllGlowPlayerUUID();
                 for (UUID uuidGlow : playerParticipantLs) {
                     for (UUID uuidSee : uuids) {
-                        if(uuidGlow != uuidSee) {
+                        if (uuidGlow != uuidSee) {
                             setPacketHandle(
                                     uuidGlow,
                                     uuidSee,
@@ -233,16 +245,17 @@ public class PacketHandler extends PacketAdapter{
             }
         });
     }
+
     /**
      * 全部旁观队伍移除参赛队伍全部发光
      */
     public static void stopSpecTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
-            if(TPMConfig.getSeeAllGlowTeamList().contains(team.color())) {
+            if (TPMConfig.getSeeAllGlowTeamList().contains(team.color())) {
                 List<UUID> playerParticipantLs = TeamManager.getAllGlowPlayerUUID();
                 for (UUID uuidGlow : playerParticipantLs) {
                     for (UUID uuidSee : uuids) {
-                        if(uuidGlow != uuidSee) {
+                        if (uuidGlow != uuidSee) {
                             setPacketHandle(
                                     uuidGlow,
                                     uuidSee,
@@ -255,6 +268,7 @@ public class PacketHandler extends PacketAdapter{
             }
         });
     }
+
     /**
      * 全部玩家看不见自身隐身
      */
@@ -268,6 +282,7 @@ public class PacketHandler extends PacketAdapter{
             );
         });
     }
+
     /**
      * 全部玩家取消看不见自身隐身
      */
@@ -281,17 +296,32 @@ public class PacketHandler extends PacketAdapter{
             );
         });
     }
+
     /**
      * 移除所有单向发包
      */
     public static void removeAllPosePacketHandle() {
-        entityPosePacketHandleMap.forEach((uuidLs,handle) -> {
-            LivingEntity entityModified = handle.getEntityModified();
-            Player playerSee = handle.getPlayerSee();
-            if (entityModified!=null && playerSee!=null)
-                sendManualPacket(protocolManager,handle);
+        entityPosePacketHandleMap.forEach((uuidLs, handle) -> {
+            UUID entityModifiedUUID = uuidLs.get(0);
+            UUID playerSeeUUID = uuidLs.get(1);
+            sendManualPacket(
+                    protocolManager,
+                    new EntityPosePacketHandle.EntityPosePacketHandleBuilder(
+                            entityModifiedUUID,
+                            playerSeeUUID)
+                            .build()
+            );
         });
         entityPosePacketHandleMap.clear();
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            sendManualPacket(
+                    protocolManager,
+                    new EntityPosePacketHandle.EntityPosePacketHandleBuilder(
+                            player.getUniqueId(),
+                            player.getUniqueId())
+                            .build()
+            );
+        });
     }
 
     /**
@@ -309,3 +339,4 @@ public class PacketHandler extends PacketAdapter{
         }
     }
 }
+

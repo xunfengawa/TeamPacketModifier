@@ -3,8 +3,6 @@ package awa.xunfeng.TPM.packets;
 import awa.xunfeng.TPM.TeamPacketModifier;
 import awa.xunfeng.TPM.config.TPMConfig;
 import awa.xunfeng.TPM.team.TeamManager;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
@@ -17,8 +15,6 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 import static awa.xunfeng.TPM.TeamPacketModifier.getIngameConfig;
-import static awa.xunfeng.TPM.TeamPacketModifier.protocolManager;
-import static awa.xunfeng.TPM.packets.ManualPacket.sendManualPacket;
 import static awa.xunfeng.TPM.packets.PacketHandler.*;
 import static awa.xunfeng.TPM.team.TeamManager.*;
 import static awa.xunfeng.TPM.team.TeamManager.findTeamByPlayerUUID;
@@ -27,16 +23,8 @@ public class PacketListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // 恢复handle
-        for (List<UUID> uuidLs : PacketHandler.entityPosePacketHandleMap().keySet()) {
-            EntityPosePacketHandle handle = PacketHandler.entityPosePacketHandleMap().get(uuidLs);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        sendManualPacket(protocolManager,handle);
-                    }
-                }.runTaskLater(TeamPacketModifier.getInstance(),1);
-        }
+        refreshTeamMap();
+        updateTeamGlow(null, findTeamByPlayerUUID(event.getPlayer().getUniqueId()), event.getPlayer().getUniqueId());
     }
 
 //    // 指令触发

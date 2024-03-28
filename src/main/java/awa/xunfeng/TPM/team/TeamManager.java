@@ -3,6 +3,7 @@ package awa.xunfeng.TPM.team;
 import awa.xunfeng.TPM.config.TPMConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
 
@@ -11,21 +12,26 @@ import java.util.*;
 import static awa.xunfeng.TPM.TeamPacketModifier.scoreboard;
 
 public class TeamManager {
-    public static Map<Team, List<UUID>> oldTeamMap = new LinkedHashMap<>();
-    public static Map<Team, List<UUID>> teamMap = new LinkedHashMap<>();
+    public static Map<Team, Set<UUID>> oldTeamMap = new LinkedHashMap<>();
+    public static Map<Team, Set<UUID>> teamMap = new LinkedHashMap<>();
+
     public static void refreshTeamMap() {
         oldTeamMap.putAll(teamMap);
         teamMap.clear();
         for (Team team : scoreboard.getTeams()) {
             if (!team.hasColor() || TPMConfig.getIgnoreTeamList().contains(team.color())) continue;
-            List<UUID> uuidLs = new ArrayList<>();
+            Set<UUID> uuidSet = new HashSet<>();
             for (String entry : team.getEntries()) {
-                uuidLs.add(Bukkit.getOfflinePlayer(entry).getUniqueId());
+                Player player = Bukkit.getPlayerExact(entry);
+                if (player != null) {
+                    uuidSet.add(player.getUniqueId());
+                }
             }
-            teamMap.put(team,uuidLs);
+            teamMap.put(team,uuidSet);
         }
         if (oldTeamMap.isEmpty()) oldTeamMap.putAll(teamMap);
     }
+
     public static Team findTeamByPlayerUUID(UUID uuid) {
         for (Team team : teamMap.keySet()) {
             if (teamMap.get(team).contains(uuid)) return team;
