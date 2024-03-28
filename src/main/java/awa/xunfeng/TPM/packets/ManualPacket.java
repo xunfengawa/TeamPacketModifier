@@ -7,6 +7,7 @@ import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.collect.Lists;
 import org.bukkit.GameMode;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
@@ -48,18 +49,18 @@ public class ManualPacket {
         protocolManager.sendServerPacket(playerSee, modifiedPacket);
     }
 
-    public static byte getEntityPoseByte(LivingEntity entity) {
+    public static byte getEntityPoseByte(Entity entity) {
         boolean[] data;
         if (entity instanceof Player player) {
             data = new boolean[]{
                     entity.isVisualFire(), entity.isSneaking(), false, player.isSprinting(),
-                    entity.isSwimming(), entity.isInvisible(), entity.isGlowing(), entity.isGliding()
+                    player.isSwimming(), entity.isInvisible(), entity.isGlowing(), player.isGliding()
             };
         }
         else {
             data = new boolean[]{
                     entity.isVisualFire(), entity.isSneaking(), false, false,
-                    entity.isSwimming(), entity.isInvisible(), entity.isGlowing(), entity.isGliding()
+                    false, entity.isInvisible(), entity.isGlowing(), false
             };
         }
         byte entityByte = 0;

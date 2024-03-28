@@ -34,32 +34,29 @@ public class PacketHandler extends PacketAdapter{
             if (!event.getPacket().getType().equals(PacketType.Play.Server.ENTITY_METADATA)) return;
             PacketContainer packet = event.getPacket().deepClone();
             Player receiver = event.getPlayer();
-            LivingEntity entityModified;
-            try {
-                entityModified = (LivingEntity) packet.getEntityModifier(receiver.getWorld()).readSafely(0);
-            } catch (Exception e) {
-                return;
-            }
+            Entity entityModified = event.getPacket().getEntityModifier(receiver.getWorld()).readSafely(0);
 
             if (entityModified instanceof Player player && player.getGameMode() == GameMode.SPECTATOR) return;
 
-            List<UUID> playerLs = Arrays.asList(entityModified.getUniqueId(),receiver.getUniqueId());
             List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
             WrappedDataValue bitMaskContainer = metadata.stream().filter(obj -> (obj.getIndex() == 0)).findAny().orElse(null);
-            if (entityPosePacketHandleMap.containsKey(playerLs)) {
-                EntityPosePacketHandle handle = entityPosePacketHandleMap.get(playerLs);
-                if (bitMaskContainer == null) {
-                    bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
-                    setContainerBits(handle, bitMaskContainer);
-                    metadata.add(bitMaskContainer);
-                    packet.getDataValueCollectionModifier().write(0, metadata);
+
+            if (getIngameConfig("Glow")) {
+                List<UUID> playerLs = Arrays.asList(entityModified.getUniqueId(), receiver.getUniqueId());
+                if (entityPosePacketHandleMap.containsKey(playerLs)) {
+                    EntityPosePacketHandle handle = entityPosePacketHandleMap.get(playerLs);
+                    if (bitMaskContainer == null) {
+                        bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
+                        setContainerBits(handle, bitMaskContainer);
+                        metadata.add(bitMaskContainer);
+                        packet.getDataValueCollectionModifier().write(0, metadata);
+                    } else
+                        setContainerBits(handle, bitMaskContainer);
                 }
-                else
-                    setContainerBits(handle, bitMaskContainer);
             }
 
             // 计分板接口
-            if (TeamPacketModifier.getIngameConfig("CancelSelfInvis")
+            if (getIngameConfig("CancelSelfInvis")
                     && entityModified.getUniqueId().equals(receiver.getUniqueId())) {
                 if (bitMaskContainer == null) {
                     bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
