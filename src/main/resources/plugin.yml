@@ -8,7 +8,7 @@ commands:
   TPM:
     aliases:
       - "tpm"# 别名，方便玩家使用
-    usage: "/tpm <on/off/reload>" # 用法
-    description: "Enable/Disable TPM features." # 描述
+    usage: "/tpm <reload>" # 用法
+    description: "Reload TPM features." # 描述
     permission: "minecraft.command.op" # 需要的权限
     permission-message: "Only OP can do that!" # 无权限返回的消息
