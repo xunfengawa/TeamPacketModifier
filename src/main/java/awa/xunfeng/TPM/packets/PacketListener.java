@@ -42,14 +42,14 @@ public class PacketListener implements Listener {
 //    // 指令触发
     @EventHandler
     public void onPlayerTeamCommand(PlayerCommandPreprocessEvent event) {
-        System.out.println("PlayerCommandPreprocessEvent: " + event.getMessage());
+//        System.out.println("PlayerCommandPreprocessEvent: " + event.getMessage());
         String command = event.getMessage();
         applyChangesOnCommand(command);
     }
 
     @EventHandler
     public void onServerCommand(ServerCommandEvent event) {
-        System.out.println("ServerCommandEvent: " + event.getCommand());
+//        System.out.println("ServerCommandEvent: " + event.getCommand());
         String command = event.getCommand();
         applyChangesOnCommand(command);
     }

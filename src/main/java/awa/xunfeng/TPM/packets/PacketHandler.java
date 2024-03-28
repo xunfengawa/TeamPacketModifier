@@ -12,6 +12,7 @@ import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -33,7 +34,12 @@ public class PacketHandler extends PacketAdapter{
             if (!event.getPacket().getType().equals(PacketType.Play.Server.ENTITY_METADATA)) return;
             PacketContainer packet = event.getPacket().deepClone();
             Player receiver = event.getPlayer();
-            LivingEntity entityModified = (LivingEntity) packet.getEntityModifier(receiver.getWorld()).readSafely(0);
+            LivingEntity entityModified;
+            try {
+                entityModified = (LivingEntity) packet.getEntityModifier(receiver.getWorld()).readSafely(0);
+            } catch (Exception e) {
+                return;
+            }
 
             if (entityModified instanceof Player player && player.getGameMode() == GameMode.SPECTATOR) return;
 
