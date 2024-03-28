@@ -1,6 +1,8 @@
 package awa.xunfeng.TPM.packets;
 
 import awa.xunfeng.TPM.TeamPacketModifier;
+import awa.xunfeng.TPM.config.TPMConfig;
+import awa.xunfeng.TPM.team.TeamManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,62 +13,50 @@ import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+import java.util.*;
 
 import static awa.xunfeng.TPM.TeamPacketModifier.getIngameConfig;
 import static awa.xunfeng.TPM.TeamPacketModifier.protocolManager;
-import static awa.xunfeng.TPM.packets.PacketHandler.updateTeamGlow;
+import static awa.xunfeng.TPM.packets.ManualPacket.sendManualPacket;
+import static awa.xunfeng.TPM.packets.PacketHandler.*;
 import static awa.xunfeng.TPM.team.TeamManager.*;
+import static awa.xunfeng.TPM.team.TeamManager.findTeamByPlayerUUID;
 
 public class PacketListener implements Listener {
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        Player p = event.getPlayer();
-        for (List<UUID> uuidLs : PacketHandler.getOneWayPacketHandleMap().keySet()) {
-            UUID uuidGlow = uuidLs.get(0);
-            UUID uuidSee = uuidLs.get(1);
-            if(!p.getUniqueId().equals(uuidGlow) && !p.getUniqueId().equals(uuidSee)) {
-                if (p.isInvisible() && getIngameConfig("CancelSelfInvis"))
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            ManualPacket.sendManualPacket(protocolManager,p,p,p.isGlowing(),false);
-                        }
-                    }.runTaskLater(TeamPacketModifier.getInstance(),1);
-                continue;
-            }
-            Player playerGlow = Bukkit.getPlayer(uuidGlow);
-            Player playerSee = Bukkit.getPlayer(uuidSee);
-            Boolean shouldGlow = PacketHandler.getOneWayPacketHandleMap().get(uuidLs).get(0);
-            Boolean shouldInvis = PacketHandler.getOneWayPacketHandleMap().get(uuidLs).get(1);
-            if (playerGlow != null && playerSee != null) {
+        // 恢复handle
+        for (List<UUID> uuidLs : PacketHandler.entityPosePacketHandleMap().keySet()) {
+            EntityPosePacketHandle handle = PacketHandler.entityPosePacketHandleMap().get(uuidLs);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        ManualPacket.sendManualPacket(protocolManager,playerGlow,playerSee,shouldGlow,shouldInvis);
+                        sendManualPacket(protocolManager,handle);
                     }
                 }.runTaskLater(TeamPacketModifier.getInstance(),1);
-            }
         }
     }
 
+//    // 指令触发
     @EventHandler
     public void onPlayerTeamCommand(PlayerCommandPreprocessEvent event) {
+        System.out.println("PlayerCommandPreprocessEvent: " + event.getMessage());
         String command = event.getMessage();
         applyChangesOnCommand(command);
     }
 
     @EventHandler
-    public void onServerTeamCommand(ServerCommandEvent event) {
+    public void onServerCommand(ServerCommandEvent event) {
+        System.out.println("ServerCommandEvent: " + event.getCommand());
         String command = event.getCommand();
         applyChangesOnCommand(command);
     }
 
     private void applyChangesOnCommand(String command) {
-        if (command.startsWith("/team ")) {
+        if (command.startsWith("/team ") || command.startsWith("/minecraft:team ")
+                || command.startsWith("team ") || command.startsWith("minecraft:team ")) {
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -74,8 +64,10 @@ public class PacketListener implements Listener {
                 }
             }.runTaskLater(TeamPacketModifier.getInstance(),1);
         }
-        else if (command.contains("TPM")) {
-            if (command.startsWith("/scoreboard players ") && command.contains("Glow")) {
+        else if ((command.startsWith("/scoreboard players ") || command.startsWith("/minecraft:scoreboard players "))
+                || (command.startsWith("scoreboard players ") || command.startsWith("minecraft:scoreboard players "))
+                && command.contains("TPM")) {
+            if (command.contains("Glow")) {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -83,7 +75,7 @@ public class PacketListener implements Listener {
                     }
                 }.runTaskLater(TeamPacketModifier.getInstance(),1);
             }
-            else if (command.startsWith("/scoreboard players ") && command.contains("CancelSelfInvis")) {
+            else if (command.contains("CancelSelfInvis")) {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -117,32 +109,106 @@ public class PacketListener implements Listener {
         }
     }
 
-    private void configGlowUpdate() {
-        for (List<UUID> uuids : PacketHandler.getOneWayPacketHandleMap().keySet()) {
-            Player playerModified = Bukkit.getPlayer(uuids.get(0));
-            Player playerSee = Bukkit.getPlayer(uuids.get(1));
-            if (playerModified != null && playerSee != null) {
-                if (PacketHandler.getOneWayPacketHandleMap().get(uuids).get(0)) {
-                    ManualPacket.sendManualPacket(
-                            protocolManager,
-                            playerModified,
-                            playerSee,
-                            playerModified.isGlowing() || getIngameConfig("Glow"),
-                            (playerModified.isInvisible() && !getIngameConfig("CancelSelfInvis")));
+    /**
+     * 单参赛队伍队内发光
+     */
+    public static void updateTeamGlow(@Nullable Team oldTeam, @Nullable Team curTeam, UUID pUpdateUUID) {
+        //原队伍处理
+        if (oldTeam != null && TeamManager.teamMap.containsKey(oldTeam)) {
+            if (TPMConfig.getGlowTeamList().contains(oldTeam.color())) {  //原为玩家队
+                for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
+                    //以前的队伍，移除该玩家对各玩家的发光
+                    setPacketHandle(
+                            pUpdateUUID,
+                            uuid,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.IGNORE
+                    );
+                    //以前的队伍，移除各玩家对该玩家的发光
+                    setPacketHandle(
+                            uuid,
+                            pUpdateUUID,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.IGNORE
+                    );
+                }
+            } else if (TPMConfig.getSeeAllGlowTeamList().contains(oldTeam.color())) {  //原为旁观队
+                for (UUID uuidGlow : getAllGlowPlayerUUID()) {
+                    //取消所有玩家对该玩家发光
+                    setPacketHandle(
+                            uuidGlow,
+                            pUpdateUUID,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.IGNORE
+                    );
+                }
+                for (UUID uuid : getAllSpecPlayerUUID()) {
+                    //添加该玩家对所有旁观玩家发光
+                    setPacketHandle(
+                            pUpdateUUID,
+                            uuid,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.TRUE
+                    );
+                }
+            }
+        }
+        //新队伍处理
+        if (curTeam != null && TeamManager.oldTeamMap.containsKey(curTeam)) {
+            if (TPMConfig.getGlowTeamList().contains(curTeam.color())) {  //换入玩家队
+                for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
+                    //现在的队伍，添加该玩家对各玩家的发光
+                    setPacketHandle(
+                            pUpdateUUID,
+                            uuid,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.TRUE
+                    );
+                    //现在的队伍，添加各玩家对该玩家的发光
+                    setPacketHandle(
+                            uuid,
+                            pUpdateUUID,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.TRUE
+                    );
+                }
+            }
+            else if (TPMConfig.getSeeAllGlowTeamList().contains(curTeam.color())) {  //换入旁观队
+                for (UUID uuid : getAllGlowPlayerUUID()) {
+                    //添加所有玩家对该玩家发光
+                    setPacketHandle(
+                            uuid,
+                            pUpdateUUID,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.TRUE
+                    );
+                }
+                for (UUID uuid : getAllSpecPlayerUUID()) {
+                    //取消该玩家对所有旁观玩家发光
+                    setPacketHandle(
+                            pUpdateUUID,
+                            uuid,
+                            EntityData.GLOWING,
+                            EntityPosePacketHandle.EntityPoseHandleType.IGNORE
+                    );
                 }
             }
         }
     }
 
-    private void configInvisUpdate() {
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            ManualPacket.sendManualPacket(
-                    protocolManager,
-                    p,
-                    p,
-                    p.isGlowing(),
-                    (p.isInvisible() && !getIngameConfig("CancelSelfInvis")));
+    private void configGlowUpdate() {
+        stopTeamGlowAll();
+        stopSpecTeamGlowAll();
+        if (getIngameConfig("Glow")) {
+            startTeamGlowAll();
+            startSpecTeamGlowAll();
         }
+    }
+
+    private void configInvisUpdate() {
+        stopCancelSelfInvisAll();
+        if (getIngameConfig("CancelSelfInvis"))
+            startCancelSelfInvisAll();
     }
 
 }

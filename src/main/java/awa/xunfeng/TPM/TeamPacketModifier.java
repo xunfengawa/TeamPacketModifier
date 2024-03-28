@@ -36,7 +36,6 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
             PacketHandler.init(this);
             PacketHandler.refresh();
 
-            Bukkit.getPluginManager().registerEvents(new PacketListener(), this);
             TPMCommand TPMCommand = new TPMCommand();
             Objects.requireNonNull(Bukkit.getPluginCommand("TPM")).setExecutor(TPMCommand);
         }

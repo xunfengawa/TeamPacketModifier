@@ -24,7 +24,7 @@ public class TeamManager {
             }
             teamMap.put(team,uuidLs);
         }
-        if (oldTeamMap.size()==0) oldTeamMap.putAll(teamMap);
+        if (oldTeamMap.isEmpty()) oldTeamMap.putAll(teamMap);
     }
     public static Team findTeamByPlayerUUID(UUID uuid) {
         for (Team team : teamMap.keySet()) {
@@ -42,12 +42,21 @@ public class TeamManager {
 
     public static List<UUID> getAllGlowPlayerUUID() {
         List<UUID> ls = new ArrayList<>();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            Team pTeam = findTeamByPlayerUUID(p.getUniqueId());
-            if (TPMConfig.getGlowTeamList().contains(pTeam)) {
-                ls.add(p.getUniqueId());
+        teamMap.forEach((team, uuidLs) -> {
+            if (TPMConfig.getGlowTeamList().contains(team.color())) {
+                ls.addAll(uuidLs);
             }
-        }
+        });
+        return ls;
+    }
+
+    public static List<UUID> getAllSpecPlayerUUID() {
+        List<UUID> ls = new ArrayList<>();
+        teamMap.forEach((team, uuidLs) -> {
+            if (TPMConfig.getSeeAllGlowTeamList().contains(team.color())) {
+                ls.addAll(uuidLs);
+            }
+        });
         return ls;
     }
 }

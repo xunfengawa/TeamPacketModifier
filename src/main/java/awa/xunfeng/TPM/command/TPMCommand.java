@@ -24,6 +24,12 @@ public class TPMCommand implements CommandExecutor, TabExecutor {
                 sender.sendMessage("[§bTeamGlow§r] 已重载");
                 return true;
             }
+            else if (args[0].equals("stopAllGlow")) {
+                PacketHandler.stopTeamGlowAll();
+                PacketHandler.stopSpecTeamGlowAll();
+                sender.sendMessage("[§bTeamGlow§r] 已停止发光");
+                return true;
+            }
         }
         return false;
     }
@@ -32,7 +38,8 @@ public class TPMCommand implements CommandExecutor, TabExecutor {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length == 1) {
             return Arrays.asList(
-                    "reload"
+                    "reload",
+                    "stopAllGlow"
             );
         }
         else {

@@ -4,69 +4,123 @@ import awa.xunfeng.TPM.TeamPacketModifier;
 import awa.xunfeng.TPM.config.TPMConfig;
 import awa.xunfeng.TPM.team.TeamManager;
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.*;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.Team;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.*;
-import java.util.List;
 
-import static awa.xunfeng.TPM.TeamPacketModifier.*;
-import static awa.xunfeng.TPM.packets.ManualPacket.getPlayerByte;
+import static awa.xunfeng.TPM.TeamPacketModifier.getIngameConfig;
+import static awa.xunfeng.TPM.TeamPacketModifier.protocolManager;
+import static awa.xunfeng.TPM.packets.ManualPacket.getEntityPoseByte;
+import static awa.xunfeng.TPM.packets.ManualPacket.sendManualPacket;
 import static awa.xunfeng.TPM.team.TeamManager.refreshTeamMap;
 
 public class PacketHandler extends PacketAdapter{
-    private static final Map<List<UUID>, List<Boolean>> oneWayPacketHandleMap = new HashMap<>();
-    private static boolean isTeamGlowing = false;
+    private static final Map<List<UUID>,EntityPosePacketHandle> entityPosePacketHandleMap = new HashMap<>();
     private static final PacketAdapter packetAdapter = new PacketAdapter(TeamPacketModifier.getInstance(), PacketType.Play.Server.ENTITY_METADATA)
     {
         public void onPacketSending(PacketEvent event) {
+//            System.out.println("onPacketSending: " + event.getPacket());
             if (!event.getPacket().getType().equals(PacketType.Play.Server.ENTITY_METADATA)) return;
             PacketContainer packet = event.getPacket().deepClone();
             Player receiver = event.getPlayer();
-            Entity glowingEntity = packet.getEntityModifier(receiver.getWorld()).readSafely(0);
-            if (!(glowingEntity instanceof Player)) return;
-            if (((Player) glowingEntity).getGameMode().equals(GameMode.SPECTATOR)) return;
-            List<UUID> playerLs = Arrays.asList(glowingEntity.getUniqueId(),receiver.getUniqueId());
-            if (oneWayPacketHandleMap.containsKey(playerLs)) {
-                List<Boolean> boolLs = oneWayPacketHandleMap.get(playerLs);
-                List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
-                WrappedDataValue bitMaskContainer = metadata.stream().filter(obj -> (obj.getIndex() == 0)).findAny().orElse(null);
-                if (bitMaskContainer != null) {
+            LivingEntity entityModified = (LivingEntity) packet.getEntityModifier(receiver.getWorld()).readSafely(0);
+
+            if (entityModified instanceof Player player && player.getGameMode() == GameMode.SPECTATOR) return;
+
+            List<UUID> playerLs = Arrays.asList(entityModified.getUniqueId(),receiver.getUniqueId());
+            List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
+            WrappedDataValue bitMaskContainer = metadata.stream().filter(obj -> (obj.getIndex() == 0)).findAny().orElse(null);
+            if (entityPosePacketHandleMap.containsKey(playerLs)) {
+                EntityPosePacketHandle handle = entityPosePacketHandleMap.get(playerLs);
+                if (bitMaskContainer == null) {
+                    bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
+                    setContainerBits(handle, bitMaskContainer);
+                    metadata.add(bitMaskContainer);
+                    packet.getDataValueCollectionModifier().write(0, metadata);
+                }
+                else
+                    setContainerBits(handle, bitMaskContainer);
+            }
+
+            // 计分板接口
+            if (TeamPacketModifier.getIngameConfig("CancelSelfInvis")
+                    && entityModified.getUniqueId().equals(receiver.getUniqueId())) {
+                if (bitMaskContainer == null) {
+                    bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
                     Byte flags = (Byte) bitMaskContainer.getValue();
-                    if (boolLs.get(0) && getIngameConfig("Glow"))
-                        bitMaskContainer.setValue(EntityData.GLOWING.setBit(flags));
-                    if (boolLs.get(1))
-                        bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
-                    event.setPacket(packet);
+                    bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
+                    metadata.add(bitMaskContainer);
+                    packet.getDataValueCollectionModifier().write(0, metadata);
                 }
                 else {
-                    Byte entityByte = getPlayerByte((Player) glowingEntity, boolLs.get(0), boolLs.get(1));
-                    metadata.add(new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class),entityByte));
-                    packet.getDataValueCollectionModifier().write(0,metadata);
-                    event.setPacket(packet);
+                    Byte flags = (Byte) bitMaskContainer.getValue();
+                    bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
                 }
             }
-            else if (TeamPacketModifier.getIngameConfig("CancelSelfInvis")
-                    && glowingEntity.getUniqueId().equals(receiver.getUniqueId())) {
-                //如果自己隐身，则若启用可见，能看到自己
-                List<WrappedDataValue> metadata = packet.getDataValueCollectionModifier().read(0);
-                Byte entityByte = getPlayerByte((Player) glowingEntity, receiver.isGlowing(), false);
-                metadata.add(new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class),entityByte));
-                packet.getDataValueCollectionModifier().write(0,metadata);
-                event.setPacket(packet);
-            }
+
+            event.setPacket(packet);
         }
     };
+
+    static void setContainerBits(EntityPosePacketHandle handle, WrappedDataValue bitMaskContainer) {
+        Byte flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.ON_FIRE.setBit(flags));
+        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isVisualFire() ? EntityData.ON_FIRE.setBit(flags) : EntityData.ON_FIRE.unsetBit(flags));
+        if (handle.getOnFire() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.ON_FIRE.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.CROUCHING.setBit(flags));
+        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isSneaking() ? EntityData.CROUCHING.setBit(flags) : EntityData.CROUCHING.unsetBit(flags));
+        if (handle.getCrouching() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.CROUCHING.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.setBit(flags));
+        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.unsetBit(flags));
+        if (handle.getPreviouslyRiding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.PREVIOUSLY_RIDING.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.SPRINTING.setBit(flags));
+        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(((Player) handle.getEntityModified()).isSprinting() ? EntityData.SPRINTING.setBit(flags) : EntityData.SPRINTING.unsetBit(flags));
+        if (handle.getSprinting() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.SPRINTING.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.SWIMMING.setBit(flags));
+        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isSwimming() ? EntityData.SWIMMING.setBit(flags) : EntityData.SWIMMING.unsetBit(flags));
+        if (handle.getSwimming() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.SWIMMING.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
+        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isInvisible() ? EntityData.INVISIBLE.setBit(flags) : EntityData.INVISIBLE.unsetBit(flags));
+        if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.GLOWING.setBit(flags));
+        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isGlowing() ? EntityData.GLOWING.setBit(flags) : EntityData.GLOWING.unsetBit(flags));
+        if (handle.getGlowing() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.GLOWING.unsetBit(flags));
+
+        flags = (Byte) bitMaskContainer.getValue();
+        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.TRUE) bitMaskContainer.setValue(EntityData.GLIDING.setBit(flags));
+        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.IGNORE)
+            bitMaskContainer.setValue(handle.getEntityModified().isGliding() ? EntityData.GLIDING.setBit(flags) : EntityData.GLIDING.unsetBit(flags));
+        if (handle.getGliding() == EntityPosePacketHandle.EntityPoseHandleType.FALSE) bitMaskContainer.setValue(EntityData.GLIDING.unsetBit(flags));
+    }
+
     public PacketHandler(Plugin arg0, ListenerPriority arg1, PacketType... arg2) {
         super(arg0, arg1, arg2);
     }
@@ -84,156 +138,69 @@ public class PacketHandler extends PacketAdapter{
             protocolManager.removePacketListener(packetAdapter);
         }
     }
-    /**
-     * 让一个玩家对另一个玩家 是否 发光/隐身
-     * @param playerModified 被发光的玩家
-     * @param playerSee 看见发光的玩家
-     * @param timeInTick 发光持续时间(null为无限长)
-     * @param shouldGlow 是否单向发光(null为保持原样)
-     * @param shouldInvis 是否单向隐身(null为保持原样)
-     */
-    public static void setPacketHandle(@Nonnull Player playerModified, @Nonnull Player playerSee, @Nullable Integer timeInTick, @Nullable Boolean shouldGlow, @Nullable Boolean shouldInvis) {
-        setPacketHandle(playerModified.getUniqueId(), playerSee.getUniqueId(), timeInTick, shouldGlow, shouldInvis);
+    public static Map<List<UUID>,EntityPosePacketHandle> entityPosePacketHandleMap() {
+        return entityPosePacketHandleMap;
     }
+
     /**
-     * 让一个玩家对另一个玩家 是否 发光/隐身
-     * @param playerModifiedUUID 被发光的玩家的UUID
-     * @param playerSeeUUID 看见发光的玩家的UUID
-     * @param timeInTick 发光持续时间(null为无限长)
-     * @param shouldGlow 是否单向发光(null为保持原样)
-     * @param shouldInvis 是否单向隐身(null为保持原样)
+     * 设置一个实体对一个玩家的发包处理
+     * @param handle 实体对玩家的发包处理类
+     * 使用EntityPosePacketHandleBuilder(entityModifiedUUID,playerSeeUUID).build()来构建
      */
-    public static void setPacketHandle(@Nonnull UUID playerModifiedUUID, @Nonnull UUID playerSeeUUID, @Nullable Integer timeInTick, @Nullable Boolean shouldGlow, @Nullable Boolean shouldInvis) {
-        if (playerModifiedUUID == playerSeeUUID) return;
-        if (Boolean.FALSE.equals(shouldGlow)
-                && isTeamGlowing
-                && TeamManager.findTeamByPlayerUUID(playerModifiedUUID) == TeamManager.findTeamByPlayerUUID(playerSeeUUID)) {
-            //队内发光中，发光为true
-            shouldGlow = true;
-        }
-
-        List<UUID> uuidLs = Arrays.asList(playerModifiedUUID,playerSeeUUID);
-        Player playerModified = Bukkit.getPlayer(playerModifiedUUID);
-        Player playerSee = Bukkit.getPlayer(playerSeeUUID);
-
-        if (!oneWayPacketHandleMap.containsKey(uuidLs)) {
-            //原先不存在
-            if (shouldGlow == null) shouldGlow = false;
-            if (shouldInvis == null) shouldInvis = false;
-            oneWayPacketHandleMap.put(uuidLs, Arrays.asList(shouldGlow,shouldInvis));
-        }
-
-        if (playerModified != null) {
-            //存在药水效果
-            if (playerModified.isGlowing()) shouldGlow = true;
-            if (playerModified.isInvisible()) shouldInvis = true;
-        }
-
-        List<Boolean> oldBoolLs =
-                Arrays.asList(
-                        oneWayPacketHandleMap.get(Arrays.asList(playerModifiedUUID,playerSeeUUID)).get(0),
-                        oneWayPacketHandleMap.get(Arrays.asList(playerModifiedUUID,playerSeeUUID)).get(1)
-                );
-        if (shouldGlow == null) shouldGlow = oldBoolLs.get(0);
-        if (shouldInvis == null) shouldInvis = oldBoolLs.get(1);
-        List<Boolean> boolLs = Arrays.asList(shouldGlow,shouldInvis);
-
-        if (!shouldGlow && !shouldInvis) {
-            //不需要更改发包，从列表剔除
-            oneWayPacketHandleMap.remove(uuidLs);
-            if (playerModified!=null && playerSee!=null)
-                ManualPacket.sendManualPacket(protocolManager,playerModified,playerSee,false,false);
-            return;
-        }
-
-        if (timeInTick == null) timeInTick = -1;
-        if(timeInTick != -1) {  //非无限时长
-            oneWayPacketHandleMap.put(uuidLs,boolLs);
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    oneWayPacketHandleMap.put(uuidLs,oldBoolLs);
-                    if (playerModified!=null && playerSee!=null) {
-                        ManualPacket.sendManualPacket(
-                                protocolManager,
-                                playerModified,
-                                playerSee,
-                                playerModified.isGlowing(),
-                                playerModified.isInvisible());
-                    }
-                }
-            }.runTaskLater(TeamPacketModifier.getInstance(), timeInTick);
-        }
-
-        else {  //无限时长
-            oneWayPacketHandleMap.put(
-                    Arrays.asList(playerModifiedUUID,playerSeeUUID),
-                    Arrays.asList(shouldGlow,shouldInvis)
-            );
-        }
-        if (playerModified!=null && playerSee!=null) ManualPacket.sendManualPacket(protocolManager,playerModified,playerSee,shouldGlow,shouldInvis);
-    }
     /**
-     * 单参赛队伍队内发光
+     * 修改一个实体对一个玩家的发包处理
+     * 不会覆盖原先已有的处理
+     * @param entityModifiedUUID 被修改实体的UUID
+     * @param playerSeeUUID 收包玩家的UUID
+     * @param dataType 要修改的实体姿态数据类型
+     * @param handleType 目标操作类型
      */
-    public static void updateTeamGlow(@Nullable Team oldTeam,@Nullable Team curTeam, UUID pUpdateUUID) {
-        if (TeamManager.oldTeamMap.containsKey(curTeam)) {
-            for (UUID uuid : TeamManager.oldTeamMap.get(curTeam)) {
-                //现在的队伍，添加该玩家对各玩家的发光
-                setPacketHandle(
-                        Objects.requireNonNull(pUpdateUUID),
-                        Objects.requireNonNull(uuid),
-                        -1,
-                        true,
-                        null
-                );
-                //现在的队伍，添加各玩家对该玩家的发光
-                setPacketHandle(
-                        Objects.requireNonNull(uuid),
-                        Objects.requireNonNull(pUpdateUUID),
-                        -1,
-                        true,
-                        null
-                );
-            }
-        }
-        if (TeamManager.teamMap.containsKey(oldTeam)) {
-            for (UUID uuid : TeamManager.teamMap.get(oldTeam)) {
-                //以前的队伍，移除该玩家对各玩家的发光
-                setPacketHandle(
-                        Objects.requireNonNull(pUpdateUUID),
-                        Objects.requireNonNull(uuid),
-                        -1,
-                        false,
-                        null
-                );
-                //以前的队伍，移除各玩家对该玩家的发光
-                setPacketHandle(
-                        Objects.requireNonNull(uuid),
-                        Objects.requireNonNull(pUpdateUUID),
-                        -1,
-                        false,
-                        null
-                );
-            }
-        }
+    public static void setPacketHandle(UUID entityModifiedUUID, UUID playerSeeUUID, EntityData dataType, EntityPosePacketHandle.EntityPoseHandleType handleType) {
+        List<UUID> uuidLs = Arrays.asList(entityModifiedUUID,playerSeeUUID);
+        EntityPosePacketHandle handle = entityPosePacketHandleMap.getOrDefault(
+                uuidLs,
+                new EntityPosePacketHandle.EntityPosePacketHandleBuilder(entityModifiedUUID,playerSeeUUID)
+                        .build()
+        ).setData(dataType, handleType);
+        entityPosePacketHandleMap.put(uuidLs,handle);
+        sendManualPacket(protocolManager,handle);
     }
+
     /**
      * 全部参赛队伍队内发光
      */
-    public static void startTeamGlow() {
-        isTeamGlowing = true;
+    public static void startTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
             if(TPMConfig.getGlowTeamList().contains(team.color())) {
-                for (UUID uuidGlow : uuids) {
-                    for (UUID uuidSee : uuids) {
-                        if(uuidGlow != uuidSee) {
+                for (UUID entityModifiedUUID : uuids) {
+                    for (UUID playerSeeUUID : uuids) {
+                        if(entityModifiedUUID != playerSeeUUID) {
                             setPacketHandle(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee),
-                                    -1,
-                                    true,
-                                    null
+                                    entityModifiedUUID,
+                                    playerSeeUUID,
+                                    EntityData.GLOWING,
+                                    EntityPosePacketHandle.EntityPoseHandleType.TRUE
+                            );
+                        }
+                    }
+                }
+            }
+        });
+    }
+    /**
+     * 全部参赛队伍停止队内发光
+     */
+    public static void stopTeamGlowAll() {
+        TeamManager.teamMap.forEach((team, uuids) -> {
+            if(TPMConfig.getGlowTeamList().contains(team.color())) {
+                for (UUID entityModifiedUUID : uuids) {
+                    for (UUID playerSeeUUID : uuids) {
+                        if(entityModifiedUUID != playerSeeUUID) {
+                            setPacketHandle(
+                                    entityModifiedUUID,
+                                    playerSeeUUID,
+                                    EntityData.GLOWING,
+                                    EntityPosePacketHandle.EntityPoseHandleType.IGNORE
                             );
                         }
                     }
@@ -252,11 +219,10 @@ public class PacketHandler extends PacketAdapter{
                     for (UUID uuidSee : uuids) {
                         if(uuidGlow != uuidSee) {
                             setPacketHandle(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee),
-                                    -1,
-                                    true,
-                                    null
+                                    uuidGlow,
+                                    uuidSee,
+                                    EntityData.GLOWING,
+                                    EntityPosePacketHandle.EntityPoseHandleType.TRUE
                             );
                         }
                     }
@@ -265,30 +231,7 @@ public class PacketHandler extends PacketAdapter{
         });
     }
     /**
-     * 全部参赛队伍停止队内发光
-     */
-    public static void stopTeamGlow() {
-        isTeamGlowing = false;
-        TeamManager.teamMap.forEach((team, uuids) -> {
-            if(TPMConfig.getGlowTeamList().contains(team.color())) {
-                for (UUID uuidGlow : uuids) {
-                    for (UUID uuidSee : uuids) {
-                        if(uuidGlow != uuidSee) {
-                            setPacketHandle(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee),
-                                    null,
-                                    false,
-                                    null
-                            );
-                        }
-                    }
-                }
-            }
-        });
-    }
-    /**
-     * 全部旁观队伍看参赛队伍全部发光
+     * 全部旁观队伍移除参赛队伍全部发光
      */
     public static void stopSpecTeamGlowAll() {
         TeamManager.teamMap.forEach((team, uuids) -> {
@@ -298,11 +241,10 @@ public class PacketHandler extends PacketAdapter{
                     for (UUID uuidSee : uuids) {
                         if(uuidGlow != uuidSee) {
                             setPacketHandle(
-                                    Objects.requireNonNull(uuidGlow),
-                                    Objects.requireNonNull(uuidSee),
-                                    -1,
-                                    false,
-                                    null
+                                    uuidGlow,
+                                    uuidSee,
+                                    EntityData.GLOWING,
+                                    EntityPosePacketHandle.EntityPoseHandleType.IGNORE
                             );
                         }
                     }
@@ -310,33 +252,57 @@ public class PacketHandler extends PacketAdapter{
             }
         });
     }
-    public static Map<List<UUID>,List<Boolean>> getOneWayPacketHandleMap() {
-        return oneWayPacketHandleMap;
+    /**
+     * 全部玩家看不见自身隐身
+     */
+    public static void startCancelSelfInvisAll() {
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            setPacketHandle(
+                    player.getUniqueId(),
+                    player.getUniqueId(),
+                    EntityData.INVISIBLE,
+                    EntityPosePacketHandle.EntityPoseHandleType.FALSE
+            );
+        });
     }
     /**
-     * 移除所有单向发包修改
+     * 全部玩家取消看不见自身隐身
      */
-    public static void stop() {
-        stopTeamGlow();
-        stopSpecTeamGlowAll();
-        oneWayPacketHandleMap.keySet().forEach(uuidLs -> {
-            Player playerModified = Bukkit.getPlayer(uuidLs.get(0));
-            Player playerSee = Bukkit.getPlayer(uuidLs.get(1));
-            if (playerModified!=null && playerSee!=null) {
-                ManualPacket.sendManualPacket(protocolManager, playerModified, playerSee, playerModified.isGlowing(), playerModified.isInvisible());
-            }
+    public static void stopCancelSelfInvisAll() {
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            setPacketHandle(
+                    player.getUniqueId(),
+                    player.getUniqueId(),
+                    EntityData.INVISIBLE,
+                    EntityPosePacketHandle.EntityPoseHandleType.IGNORE
+            );
         });
-        oneWayPacketHandleMap.clear();
+    }
+    /**
+     * 移除所有单向发包
+     */
+    public static void removeAllPosePacketHandle() {
+        entityPosePacketHandleMap.forEach((uuidLs,handle) -> {
+            LivingEntity entityModified = handle.getEntityModified();
+            Player playerSee = handle.getPlayerSee();
+            if (entityModified!=null && playerSee!=null)
+                sendManualPacket(protocolManager,handle);
+        });
+        entityPosePacketHandleMap.clear();
     }
 
+    /**
+     * 重新加载配置文件后重新计算哪些队伍需要发包
+     */
     public static void refresh() {
         refreshTeamMap();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            ManualPacket.sendManualPacket(protocolManager, p, p, p.isGlowing(), (p.isInvisible() && !getIngameConfig("CancelSelfInvis")));
+        removeAllPosePacketHandle();
+        if (getIngameConfig("Glow")) {
+            startTeamGlowAll();
+            startSpecTeamGlowAll();
         }
-        stopTeamGlow();
-        startSpecTeamGlowAll();
-        startTeamGlow();
-        startSpecTeamGlowAll();
+        if (getIngameConfig("CancelSelfInvis")) {
+            startCancelSelfInvisAll();
+        }
     }
 }
