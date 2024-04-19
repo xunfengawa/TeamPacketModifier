@@ -14,6 +14,7 @@ import org.bukkit.scoreboard.Team;
 import javax.annotation.Nullable;
 import java.util.*;
 
+import static awa.xunfeng.TPM.TeamPacketModifier.enabled;
 import static awa.xunfeng.TPM.TeamPacketModifier.getIngameConfig;
 import static awa.xunfeng.TPM.packets.PacketHandler.*;
 import static awa.xunfeng.TPM.team.TeamManager.*;
@@ -23,13 +24,25 @@ public class PacketListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        if (!enabled) return;
         refreshTeamMap();
-        updateTeamGlow(null, findTeamByPlayerUUID(event.getPlayer().getUniqueId()), event.getPlayer().getUniqueId());
+        Team team = TeamManager.findTeamByPlayerUUID(event.getPlayer().getUniqueId());
+        if (team == null || (!TPMConfig.getGlowTeamList().contains(team.color()) && !TPMConfig.getSeeAllGlowTeamList().contains(team.color()))) return;
+        removeAllPosePacketHandle();
+        if (getIngameConfig("Glow")) {
+            startTeamGlowAll();
+            startSpecTeamGlowAll();
+        }
+        if (getIngameConfig("CancelSelfInvis")) {
+            startCancelSelfInvisAll();
+        }
+//        updateTeamGlow(null, findTeamByPlayerUUID(event.getPlayer().getUniqueId()), event.getPlayer().getUniqueId());
     }
 
 //    // 指令触发
     @EventHandler
     public void onPlayerTeamCommand(PlayerCommandPreprocessEvent event) {
+        if (!enabled) return;
 //        System.out.println("PlayerCommandPreprocessEvent: " + event.getMessage());
         String command = event.getMessage();
         applyChangesOnCommand(command);
@@ -37,6 +50,7 @@ public class PacketListener implements Listener {
 
     @EventHandler
     public void onServerCommand(ServerCommandEvent event) {
+        if (!enabled) return;
 //        System.out.println("ServerCommandEvent: " + event.getCommand());
         String command = event.getCommand();
         applyChangesOnCommand(command);
@@ -48,7 +62,8 @@ public class PacketListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    teamUpdate();
+//                    teamUpdate();
+                    refresh();
                 }
             }.runTaskLater(TeamPacketModifier.getInstance(),1);
         }

@@ -301,27 +301,18 @@ public class PacketHandler extends PacketAdapter {
      * 移除所有单向发包
      */
     public static void removeAllPosePacketHandle() {
-        entityPosePacketHandleMap.forEach((uuidLs, handle) -> {
-            UUID entityModifiedUUID = uuidLs.get(0);
-            UUID playerSeeUUID = uuidLs.get(1);
-            sendManualPacket(
-                    protocolManager,
-                    new EntityPosePacketHandle.EntityPosePacketHandleBuilder(
-                            entityModifiedUUID,
-                            playerSeeUUID)
-                            .build()
-            );
-        });
         entityPosePacketHandleMap.clear();
-        Bukkit.getOnlinePlayers().forEach(player -> {
-            sendManualPacket(
-                    protocolManager,
-                    new EntityPosePacketHandle.EntityPosePacketHandleBuilder(
-                            player.getUniqueId(),
-                            player.getUniqueId())
-                            .build()
-            );
-        });
+        for (Player p1 : Bukkit.getOnlinePlayers()) {
+            for (Player p2 : Bukkit.getOnlinePlayers()) {
+                sendManualPacket(
+                        protocolManager,
+                        new EntityPosePacketHandle.EntityPosePacketHandleBuilder(
+                                p1.getUniqueId(),
+                                p2.getUniqueId())
+                                .build()
+                );
+            }
+        }
     }
 
     /**

@@ -54,10 +54,16 @@ public class ManualPacket {
     public static byte getEntityPoseByte(Entity entity) {
         boolean[] data;
         if (entity instanceof Player player) {
-            data = new boolean[]{
+            if (player.getGameMode() != GameMode.SPECTATOR)
+                data = new boolean[]{
                     player.isVisualFire(), player.isSneaking(), false, player.isSprinting(),
                     player.isSwimming(), player.isInvisible(), player.isGlowing(), player.isGliding()
-            };
+                };
+            else
+                data = new boolean[]{
+                    false, false, false, false,
+                    false, true, false, false
+                };
         }
         else {
             data = new boolean[]{
