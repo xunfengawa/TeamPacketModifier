@@ -108,6 +108,8 @@ public class PacketHandler extends PacketAdapter {
             bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
         if (handle.getInvisible() == EntityPosePacketHandle.EntityPoseHandleType.FALSE)
             bitMaskContainer.setValue(EntityData.INVISIBLE.unsetBit(flags));
+        if (handle.getEntityModified() instanceof Player player && player.getGameMode() == GameMode.SPECTATOR)
+            bitMaskContainer.setValue(EntityData.INVISIBLE.setBit(flags));
 
         flags = (Byte) bitMaskContainer.getValue();
         if (getIngameConfig("Glow")) {
