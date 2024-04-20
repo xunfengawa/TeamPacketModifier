@@ -2,8 +2,8 @@ package awa.xunfeng.TPM;
 
 import awa.xunfeng.TPM.command.TPMCommand;
 import awa.xunfeng.TPM.config.TPMConfig;
+import awa.xunfeng.TPM.listeners.PlayerChangeTeamListener;
 import awa.xunfeng.TPM.packets.PacketHandler;
-import awa.xunfeng.TPM.packets.PacketListener;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.Bukkit;
@@ -19,7 +19,7 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
     public static Scoreboard scoreboard;
     public static ProtocolManager protocolManager;
     public static boolean enabled = false;
-    public static PacketListener packetListener;
+    public static PlayerChangeTeamListener playerChangeTeamListener;
     public static TeamPacketModifier getInstance() {
         return INSTANCE;
     }
@@ -32,7 +32,7 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         INSTANCE = this;
-        packetListener = new PacketListener();
+        playerChangeTeamListener = new PlayerChangeTeamListener();
         TPMConfig.load();
         scoreboard = this.getServer().getScoreboardManager().getMainScoreboard();
         protocolManager = ProtocolLibrary.getProtocolManager();
@@ -46,13 +46,13 @@ public class TeamPacketModifier extends JavaPlugin implements Listener {
         if (enabled) return;
         enabled = true;
         PacketHandler.init();
-        Bukkit.getPluginManager().registerEvents(packetListener, TeamPacketModifier.getInstance());
+        Bukkit.getPluginManager().registerEvents(playerChangeTeamListener, TeamPacketModifier.getInstance());
     }
 
     public static void disable() {
         if (!enabled) return;
         enabled = false;
         PacketHandler.disable();
-        HandlerList.unregisterAll(packetListener);
+        HandlerList.unregisterAll(playerChangeTeamListener);
     }
 }

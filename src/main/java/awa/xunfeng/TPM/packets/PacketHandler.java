@@ -55,7 +55,7 @@ public class PacketHandler extends PacketAdapter {
 
             // 计分板接口
             if (getIngameConfig("CancelSelfInvis")
-                    && entityModified.getUniqueId().equals(receiver.getUniqueId())) {
+                    && entityModified.getUniqueId() == receiver.getUniqueId()) {
                 if (bitMaskContainer == null) {
                     bitMaskContainer = new WrappedDataValue(0, WrappedDataWatcher.Registry.get(Byte.class), getEntityPoseByte(entityModified));
                     Byte flags = (Byte) bitMaskContainer.getValue();
@@ -276,12 +276,13 @@ public class PacketHandler extends PacketAdapter {
      */
     public static void startCancelSelfInvisAll() {
         Bukkit.getOnlinePlayers().forEach(player -> {
-            setPacketHandle(
-                    player.getUniqueId(),
-                    player.getUniqueId(),
-                    EntityData.INVISIBLE,
-                    EntityPosePacketHandle.EntityPoseHandleType.FALSE
-            );
+            if (player.getGameMode() != GameMode.SPECTATOR)
+                setPacketHandle(
+                        player.getUniqueId(),
+                        player.getUniqueId(),
+                        EntityData.INVISIBLE,
+                        EntityPosePacketHandle.EntityPoseHandleType.FALSE
+                );
         });
     }
 

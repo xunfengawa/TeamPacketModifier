@@ -7,7 +7,6 @@ import awa.xunfeng.TPM.packets.PacketHandler;
 import awa.xunfeng.TPM.team.TeamManager;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,12 +19,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import static awa.xunfeng.TPM.TeamPacketModifier.enabled;
-import static awa.xunfeng.TPM.packets.PacketHandler.cancelPacketHandle;
 import static awa.xunfeng.TPM.packets.PacketHandler.entityPosePacketHandleMap;
-import static awa.xunfeng.TPM.team.TeamManager.refreshTeamMap;
 
 public class TPMCommand implements CommandExecutor, TabExecutor {
 
