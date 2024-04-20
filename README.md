@@ -51,3 +51,11 @@ Ignore-TeamColors:
 ## 4. 游戏内指令/teamglow
 ### /teamglow reload
 - 重载配置文件
+### /teamglow enable
+- 启用TPM功能
+### /teamglow diable
+- 禁用TPM功能
+### /teamglow RefreshTeamMap
+- 更新当前队伍信息
+### /teamglow stopAllGlow
+- (不稳定)停止单向发光
